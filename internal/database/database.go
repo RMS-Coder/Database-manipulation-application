@@ -46,8 +46,13 @@ type DB struct {
 
 var dbInstance *DB
 
+//var ConnectedChan = make(chan bool)
+
+
 func GetDB() *DB {
-	CheckConnection()
+	ConnectionMonitor()
+
+    //<-ConnectedChan
 
 	return dbInstance
 }
@@ -98,22 +103,54 @@ func OpenConnection() error {
 	return nil
 }
 
-func CheckConnection() {
-    // Se não existe conexão ou o ping falhou
-    if dbInstance == nil || dbInstance.Ping() != nil {
-        fmt.Println("\033[31mTentando conectar ao banco de dados...\033[0m")
+func ConnectionMonitor() {
+	if dbInstance == nil || dbInstance.Ping() != nil {
+		go func() {
+			for {
+				fmt.Println("\033[33mAttempting to connect to the database...\033[0m")
 
-        if err := OpenConnection(); err != nil {
-            time.Sleep(10 * time.Second) // espera antes de tentar de novo
-            fmt.Println("\033[31mFalha ao conectar:\033[0m", err)
-			CheckConnection()            // chamada recursiva
+				err := OpenConnection()
+				if err != nil {
+					time.Sleep(10 * time.Second)
+					fmt.Println("\033[31mFailed to connect:\033[0m", err)
+					continue
+				}
+				break
+			}
+
+			//ConnectedChan <- true // sinaliza sucesso
+			defer fmt.Println("\033[32mConnection established!\033[0m")
+		}()
+	}
+}
+
+/*func HandleRequest(w http.ResponseWriter, r *http.Request) {
+    timeout := 3 * time.Second
+    done := make(chan bool)
+
+    go func() {
+        for {
+            if dbInstance == nil || dbInstance.Ping() != nil {
+                err := OpenConnection()
+                if err != nil {
+                    time.Sleep(2 * time.Second)
+                    continue
+                }
+            }
+            done <- true
             return
         }
+    }()
 
-        fmt.Println("\033[32mConexão bem-sucedida!\033[0m")
-        return
+    select {
+    case <-done:
+        fmt.Fprintln(w, "✅ Connection established.")
+    case <-time.After(timeout):
+        fmt.Fprintln(w, "⏳ Still trying to connect. Please wait or try again shortly.")
     }
-}
+}*/
+
+
 
 func CloseConnection() error {
     if dbInstance == nil {
@@ -145,7 +182,7 @@ func (db *DB) GetDBInfo() error {
 		`SELECT 
 			current_setting('server_version') AS server_version, 
 			current_setting('max_connections')::int AS max_connections, 
-			(SELECT COUNT(*)::int FROM pg_stat_activity WHERE datname = $1) AS opened_connections;`,
+			(SELECT COUNT(*)::int FROM pg_stat_activity WHERE datname = $1)::int AS opened_connections;`,
 		os.Getenv("PGDATABASE"),
 	).Scan(&serverVersion, &maxConnections, &openedConnections)
 
