@@ -14,10 +14,10 @@ func main() {
     defer database.CloseConnection()
 
 	// Aguarda conexão com o banco e executa lógica dependente
-    /*go func() {
+    go func() {
         <-database.ConnectedChan
         database.GetDB().GetDBInfo()
-    }()*/
+    }()
 
 	routes()
 

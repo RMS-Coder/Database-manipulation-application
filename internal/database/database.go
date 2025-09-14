@@ -46,13 +46,15 @@ type DB struct {
 
 var dbInstance *DB
 
-//var ConnectedChan = make(chan bool)
-
+var ConnectedChan = make(chan bool)
 
 func GetDB() *DB {
 	ConnectionMonitor()
 
-    //<-ConnectedChan
+	go func() {
+        <-ConnectedChan
+        GetDB().GetDBInfo()
+    }()
 
 	return dbInstance
 }
@@ -105,6 +107,7 @@ func OpenConnection() error {
 
 func ConnectionMonitor() {
 	if dbInstance == nil || dbInstance.Ping() != nil {
+
 		go func() {
 			for {
 				fmt.Println("\033[33mAttempting to connect to the database...\033[0m")
@@ -118,7 +121,7 @@ func ConnectionMonitor() {
 				break
 			}
 
-			//ConnectedChan <- true // sinaliza sucesso
+			ConnectedChan <- true // sinaliza sucesso
 			defer fmt.Println("\033[32mConnection established!\033[0m")
 		}()
 	}
