@@ -35,28 +35,52 @@ import (
 	"os"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib" // usando pgx driver
 	"github.com/joho/godotenv"
 )
 
-// DB é uma struct que encapsula a conexão com o banco
+// DB é uma struct que encapsula a conexão com o bancofmt.Println("\033[32mConnection established!\033[0m")
 type DB struct {
 	*sql.DB
 }
 
 var dbInstance *DB
 
-var ConnectedChan = make(chan bool)
+//var ConnectedChan = make(chan bool)
 
 func GetDB() *DB {
 	ConnectionMonitor()
 
-	go func() {
-        <-ConnectedChan
-        GetDB().GetDBInfo()
-    }()
-
 	return dbInstance
+}
+
+func GetSQLState(err error) error {
+    if pgErr, ok := err.(*pgconn.PgError); ok {
+        return fmt.Errorf(pgErr.Code)
+    }
+    return err
+
+/*
+	CREATE (INSERT):
+	23505 - Unique violation
+	23502 - Not null violation
+	23503 - Foreign key violation
+	22001 - Data too long
+
+	READ (SELECT):
+	P0002 - No data found (já capturado pelo PgError)
+	42P01 - Table doesn't exist
+	42703 - Column doesn't exist
+
+	UPDATE:
+	23505 - Data conflicts
+	23502 - Required fields missing
+	23503 - Invalid references
+
+	DELETE:
+	23503 - Foreign key violation (dependent records)
+*/
 }
 
 func loadDBConnectionString(key string) (string, error) {
@@ -92,6 +116,11 @@ func OpenConnection() error {
 		return fmt.Errorf("unable to connect to database: %w", err)
 	}
 
+	// Configurar o pool de conexões
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -121,8 +150,8 @@ func ConnectionMonitor() {
 				break
 			}
 
-			ConnectedChan <- true // sinaliza sucesso
 			defer fmt.Println("\033[32mConnection established!\033[0m")
+			//ConnectedChan <- true // sinaliza sucesso
 		}()
 	}
 }
@@ -137,8 +166,6 @@ func ConnectionMonitor() {
                 err := OpenConnection()
                 if err != nil {
                     time.Sleep(2 * time.Second)
-                    continue
-                }
             }
             done <- true
             return
@@ -147,27 +174,24 @@ func ConnectionMonitor() {
 
     select {
     case <-done:
-        fmt.Fprintln(w, "✅ Connection established.")
+        fmt.Fprintln(w, "Connection established.")
     case <-time.After(timeout):
-        fmt.Fprintln(w, "⏳ Still trying to connect. Please wait or try again shortly.")
+        fmt.Fprintln(w, "Still trying to connect. Please wait or try again shortly.")
     }
 }*/
 
-
-
 func CloseConnection() error {
-    if dbInstance == nil {
+	if dbInstance == nil {
 		return nil
-    }
+	}
 
-	err := dbInstance.Close();
-    if  err != nil {
-        return fmt.Errorf("error closing database connection: %w", err)
-    }
-	
+	err := dbInstance.Close()
+	if err != nil {
+		return fmt.Errorf("error closing database connection: %w", err)
+	}
+
 	return nil
 }
-
 
 // GetDBInfo retorna informações do banco (mantido como exemplo)
 func (db *DB) GetDBInfo() error {

@@ -1,9 +1,7 @@
 package main
 
 import (
-	//"fmt"
 	"net/http"
-	//"time"
 
 	"github.com/RodrigoMS/app/internal/database"
 )
@@ -14,10 +12,10 @@ func main() {
     defer database.CloseConnection()
 
 	// Aguarda conexão com o banco e executa lógica dependente
-    go func() {
+    /*go func() {
         <-database.ConnectedChan
         database.GetDB().GetDBInfo()
-    }()
+    }()*/
 
 	routes()
 

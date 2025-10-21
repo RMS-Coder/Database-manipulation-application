@@ -18,17 +18,20 @@ import (
 
 func CreateUser(name, email, password string) (User, error) {
     var user User
-
     db := database.GetDB()
 
     err := db.QueryRow(
         `INSERT INTO "user" (name, email, password)
-           VALUES ($1, $2, $3)
+         VALUES ($1, $2, $3)
          RETURNING id, name, email, active`,
         name, email, password,
     ).Scan(&user.ID, &user.Name, &user.Email, &user.Active)
 
-    return user, err
+    if err != nil {
+        return user, database.GetSQLState(err) // substitui o erro original
+    }
+
+    return user, nil
 }
 
 func ReadAllUsers() ([]User, error) {

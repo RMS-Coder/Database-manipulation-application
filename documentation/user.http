@@ -4,7 +4,7 @@ GET http://localhost:8080/users
 
 ###
 
-GET http://localhost:8080/user/5634d43e-b49c-4d73-909d-38907f6f674a
+GET http://localhost:8080/user/e92371f0-c44d-44a8-a5d2-b932cfa9ef5c
 
 ###
 
@@ -23,7 +23,7 @@ PUT http://localhost:8080/user HTTP/1.1
 content-type: application/json
 
 {
-    "id": "83c957bd-f0be-4b87-b3a0-0873b96b3175",
+    "id": "e92371f0-c44d-44a8-a5d2-b932cfa9ef5c",
     "name": "User RMS",
     "email": "rms@app.com",
     "password": "123456789"
